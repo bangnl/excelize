@@ -198,6 +198,45 @@ func (f *File) SetRowStr(sheet string, rowIdx int, value ...*string) {
 	f.saveFileList(name, replaceWorkSheetsRelationshipsNameSpace(string(output)))
 }
 
+//SetMultiRow provides function to set string type value of multirow
+func (f *File) SetMultiRow(sheet string, rowIdxStart int, vals *[][]*string) {
+	var xlsx xlsxWorksheet
+	name := "xl/worksheets/" + strings.ToLower(sheet) + ".xml"
+	xml.Unmarshal([]byte(f.readXML(name)), &xlsx)
+	if f.checked == nil {
+		f.checked = make(map[string]bool)
+	}
+	ok := f.checked[name]
+	if !ok {
+		checkRow(&xlsx)
+		f.checked[name] = true
+	}
+	sz := len(*vals)
+	rowIdx := rowIdxStart
+	for rn := 0; rn < sz; rn++ {
+		value := (*vals)[rn]
+		sz2 := len(value)
+		for i := 0; i < sz2; i++ {
+			xAxis := rowIdx - 1
+			yAxis := i
+
+			rows := xAxis + 1
+			cell := yAxis + 1
+
+			completeRow(&xlsx, rows, cell)
+			completeCol(&xlsx, rows, cell)
+
+			xlsx.SheetData.Row[xAxis].C[yAxis].T = "str"
+			xlsx.SheetData.Row[xAxis].C[yAxis].V = *value[i]
+		}
+
+		rowIdx++
+	}
+
+	output, _ := xml.Marshal(xlsx)
+	f.saveFileList(name, replaceWorkSheetsRelationshipsNameSpace(string(output)))
+}
+
 // SetCellDefault provides function to set string type value of a cell as
 // default format without escaping the cell.
 func (f *File) SetCellDefault(sheet, axis, value string) {
